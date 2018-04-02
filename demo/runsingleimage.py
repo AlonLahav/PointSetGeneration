@@ -79,13 +79,13 @@ def loadModel(weightsfile):
 	fin.close()
 	for t in tf.trainable_variables():
 		if t.name not in loaddict:
-			print 'missing',t.name
+			print ('missing',t.name)
 		else:
 			sess.run(t.assign(loaddict[t.name]))
 			del loaddict[t.name]
 	for k in loaddict.iteritems():
 		if k[0]!='Variable:0':
-			print 'unused',k
+			print ('unused',k)
 	return (sess,img_inp,x)
 
 def run_image(model,img_in,img_mask):

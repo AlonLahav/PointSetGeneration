@@ -1,19 +1,38 @@
 import numpy as np
 import pylab as plt
+import imageio
 import tensorflow as tf
 import tensorflow.contrib.eager as tfe
-from tensorflow.python.framework import ops
+
 
 # TODO:
 # . Share with Ayellet
-# . Video output
 # . Add one point at a time
 # . Polygon to points loss
 # . EMD Loss - implement
 
-np.random.seed(1)
 
+# Parameters
+n_dots = 100
+n_iters = 100
+learning_rate = .4
+radiuses = [1, 2, 4]
+video_output = 1
+
+# Some initializations
+np.random.seed(1)
 tfe.enable_eager_execution()
+if video_output:
+    video = imageio.get_writer('points.mp4', fps=20)
+
+
+def figure_2_np_array(fig):
+    fig.add_subplot(111)
+    fig.canvas.draw()
+    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    return data
+
 
 def generate_2d_point_cloud(method, n_dots, rs=[1], show=False):
     if method == 'circle':
@@ -31,12 +50,8 @@ def generate_2d_point_cloud(method, n_dots, rs=[1], show=False):
     return points
 
 
-# Parameters
-n_dots = 60
-learning_rate = 1
-
 # Get points to estimate
-points = generate_2d_point_cloud('circle', n_dots, rs=[1, 2, 3], show=0)
+points = generate_2d_point_cloud('circle', n_dots, rs=radiuses, show=0)
 
 # Variable to train
 tmp = generate_2d_point_cloud('circle', n_dots, rs=[.2], show=0)
@@ -63,11 +78,23 @@ def grad(points, vr_points):
         #loss_value = loss_l2(points, vr_points)
     return tape.gradient(loss_value, [vr_points])
 
+if video_output:
+    fig = plt.figure(1)
+    plt.plot(points[:, 0], points[:, 1], 'bo')
+    h_last = None
 all_est_points = []
-for _ in range(40):
+for iter in range(n_iters):
     dPoints, = grad(points, vr_points)
     vr_points.assign_sub(dPoints * learning_rate)
-    all_est_points.append(np.array(vr_points.value()))
+    curr_est_points = np.array(vr_points.value())
+    all_est_points.append(curr_est_points)
+    if video_output:
+        plt.title(iter)
+        if h_last != None:
+            h_last.remove()
+        h_last, = plt.plot(curr_est_points[:, 0], curr_est_points[:, 1], 'r.')
+        img = figure_2_np_array(fig)
+        video.append_data(img)
 
 all_est_points = np.array(all_est_points)
 
@@ -80,4 +107,5 @@ if 0:
 else:
     plt.plot(all_est_points[-1, :, 0], all_est_points[-1, :, 1], '*')
 
-plt.show()
+if video_output:
+    video.close()
