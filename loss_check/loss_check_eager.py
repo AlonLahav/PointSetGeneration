@@ -4,6 +4,13 @@ import tensorflow as tf
 import tensorflow.contrib.eager as tfe
 from tensorflow.python.framework import ops
 
+# TODO:
+# . Share with Ayellet
+# . Video output
+# . Add one point at a time
+# . Polygon to points loss
+# . EMD Loss - implement
+
 np.random.seed(1)
 
 tfe.enable_eager_execution()
