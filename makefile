@@ -1,6 +1,6 @@
 nvcc = /usr/local/cuda-8.0/bin/nvcc
 cudalib = /usr/local/cuda-8.0/lib64/
-tensorflow = /usr/local/lib/python2.7/dist-packages/tensorflow/include
+tensorflow = /home/alon/tensorflow/local/lib/python2.7/site-packages/tensorflow/include
 
 all: depthestimate/tf_nndistance_so.so depthestimate/render_balls_so.so
 .PHONY : all

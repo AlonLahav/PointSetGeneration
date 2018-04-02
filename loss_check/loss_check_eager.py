@@ -14,7 +14,8 @@ import tensorflow.contrib.eager as tfe
 
 # Parameters
 n_dots = 100
-n_iters = 100
+n_dots_to_train = 100
+n_iters = 50
 learning_rate = .4
 radiuses = [1, 2, 4]
 video_output = 1
@@ -50,19 +51,7 @@ def generate_2d_point_cloud(method, n_dots, rs=[1], show=False):
     return points
 
 
-# Get points to estimate
-points = generate_2d_point_cloud('circle', n_dots, rs=radiuses, show=0)
-
-# Variable to train
-tmp = generate_2d_point_cloud('circle', n_dots, rs=[.2], show=0)
-tmp = np.random.normal(0, 2, (n_dots, 2))
-vr_points = tfe.Variable(tmp, dtype=tf.float32)
-
 # Loss
-def loss_l2(points, vr_points):
-    loss = tf.reduce_mean((points - vr_points) ** 2)
-    return loss
-
 def charmer_distance(points, vr_points):
     loss = 0
     for point in points:
@@ -75,37 +64,39 @@ def charmer_distance(points, vr_points):
 def grad(points, vr_points):
     with tfe.GradientTape() as tape:
         loss_value = charmer_distance(points, vr_points)
-        #loss_value = loss_l2(points, vr_points)
     return tape.gradient(loss_value, [vr_points])
+
+
+# Get points to estimate
+points = generate_2d_point_cloud('circle', n_dots, rs=radiuses, show=0)
 
 if video_output:
     fig = plt.figure(1)
     plt.plot(points[:, 0], points[:, 1], 'bo')
     h_last = None
-all_est_points = []
-for iter in range(n_iters):
-    dPoints, = grad(points, vr_points)
-    vr_points.assign_sub(dPoints * learning_rate)
-    curr_est_points = np.array(vr_points.value())
-    all_est_points.append(curr_est_points)
-    if video_output:
-        plt.title(iter)
-        if h_last != None:
-            h_last.remove()
-        h_last, = plt.plot(curr_est_points[:, 0], curr_est_points[:, 1], 'r.')
-        img = figure_2_np_array(fig)
-        video.append_data(img)
 
-all_est_points = np.array(all_est_points)
+curr_est_points = None
+for _ in range(n_dots_to_train):
+    # Variable to train
+    tmp = np.random.uniform(-4, 4, (1, 2)) / 100
+    if type(curr_est_points) is np.ndarray:
+        tmp = np.vstack((curr_est_points, tmp))
+    vr_points = tfe.Variable(tmp, dtype=tf.float32)
 
-plt.figure()
-plt.plot(points[:, 0], points[:, 1], 'o')
-if 0:
-    for n in range(n_dots):
-        this_pnt = all_est_points[:, n]
-        plt.plot(this_pnt[:, 0], this_pnt[:, 1], '.')
-else:
-    plt.plot(all_est_points[-1, :, 0], all_est_points[-1, :, 1], '*')
+    print vr_points.shape
+
+    for iter in range(n_iters):
+        dPoints, = grad(points, vr_points)
+        vr_points.assign_sub(dPoints * learning_rate)
+        curr_est_points = np.array(vr_points.value())
+        if video_output:
+            plt.title(iter)
+            if h_last != None:
+                h_last.remove()
+            h_last, = plt.plot(curr_est_points[:, 0], curr_est_points[:, 1], 'r.')
+            plt.axis((-4, 4, -4, 4))
+            img = figure_2_np_array(fig)
+            video.append_data(img)
 
 if video_output:
     video.close()
